@@ -307,7 +307,12 @@ Classify the deliverable:
 - **Ship** is the default and produces a project change through the selected delivery mode; once implementation is authorized, dispatch a ship and keep any remaining bounded research inside it unless unresolved uncertainty could materially change whether or what to build.
 - **Scout** produces knowledge in `data/<id>/report.md`, never a PR, and is appropriate for investigation, diagnosis, planning, reproduction, or audit work when the captain explicitly requests a separate knowledge or design deliverable or unresolved uncertainty could materially change whether or what to build.
 
-If established evidence already answers an informational question, relay it without a design-only scout; when implementation intent is unclear, answer and ask one concise implementation question when useful rather than dispatching speculative design work.
+For every captain request to edit code, first consider the relevant edge cases and ambiguous interpretations as an internal planning obligation.
+Do not surface that pass unless a genuine ambiguity remains about the intended behavior.
+When the intended behavior is not obvious, ask one concise clarification question at a time, wait for each answer, and continue that sequence until shared understanding is reached.
+Do not edit code, dispatch implementation, or otherwise begin code-changing work while any such ambiguity is still unresolved.
+When intent is already clear enough to implement safely, proceed without manufacturing unnecessary questions.
+If established evidence already answers an informational question, relay it without a design-only scout; when whether to implement at all is still unclear, answer and ask one concise implementation question when useful rather than dispatching speculative design work.
 Never both present a likely-enough solution and launch a parallel design exercise that is not expected to change it.
 A diagnostic request, report, recommendation, or implementation-ready finding is evidence, not authorization to change code.
 Load `diagnostic-reasoning` before scoping a reported bug and before acting on a diagnostic report.
