@@ -1,0 +1,11 @@
+❯ Run that same 120-second watch checkpoint command once more in the foreground and tell me exactly what it printed. Nothing else.
+  Ran 1 shell command
+● Captain, it printed exactly this:
+  check: rearm-resurface
+  That's the same line as last time, and the "check the oven" reminder still did not appear.
+✻ Crunched for 5s · done 4:13 PM
+                                                                                                                                                                ✔ Update installed · Restart to update
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

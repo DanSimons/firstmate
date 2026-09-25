@@ -1,0 +1,38 @@
+❯ Drain and acknowledge that oven wake the same way. Then I have called the repair shop and checked the oven: mark both reminders done with bin/fm-memory.sh, then show bin/fm-memory.sh list --all and
+  ls state/ in this home. Do not run the checkpoint.
+  Ran 4 shell commands
+● Captain, both reminders are marked done and the oven notification is cleared. I didn't run the checkpoint.
+  Steps taken:
+  - Drained the queue. It held one item, the "check the oven" reminder (item 2).
+  - Marked both reminders done:
+  done: m-1790374323-2884885-30752 at 1790374437
+  done: m-1790373683-2714390-27075 at 1790374437
+  - Acknowledged the notification with --ack-through 2 --recovery-generation 2913531.1790374418.MBTR0N. It exited 0 with no output.
+  bin/fm-memory.sh list --all:
+  m-1790373683-2714371-13660    memory  open    -       The storage-unit code is in the paper folder
+  m-1790373683-2714390-27075    reminder        done    2026-09-25T22:01:26Z    Call the repair shop
+  m-1790373683-2714480-343      reminder        open    2030-10-05T16:30:00Z    Send the renewal note
+  m-1790374323-2884885-30752    reminder        done    2026-09-25T22:12:23Z    check the oven
+  ls -A state/ (this home is /tmp/fm-lab.HZVgde; I added -A so hidden files show):
+  .heartbeat-streak
+  home-summary.json
+  .inactive-outcome-reconcile
+  .last-check
+  .last-heartbeat
+  .last-watcher-beat
+  memory-reminders.check.sh
+  memory-reminders.check-trust
+  .secondmate-liveness-tick
+  terminal-outcomes
+  .wake-queue
+  .wake-queue.seq
+  .watch-deliveries.log
+  .watcher-down
+  The reminder check (memory-reminders.check.sh) is still set up because "Send the renewal note" is open until 2030. The script only removes that check once no open reminders remain, so this is
+  expected.
+✻ Churned for 19s · done 4:14 PM
+                                                                                                                                                                ✔ Update installed · Restart to update
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

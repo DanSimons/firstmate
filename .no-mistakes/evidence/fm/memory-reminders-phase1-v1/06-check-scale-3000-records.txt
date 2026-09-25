@@ -1,0 +1,9 @@
+store: 3001 records (1500 memories, 1500 done reminders, 1 open due reminder)
+$ time state/memory-reminders.check.sh
+memory reminder due: m-1790374483-2938167-29800 Due among thousands
+
+real	0m0.729s
+user	0m0.632s
+sys	0m0.098s
+$ fm-memory.sh search "note 2999"
+m-1790374484-2998-1	memory	open	-	note 2998

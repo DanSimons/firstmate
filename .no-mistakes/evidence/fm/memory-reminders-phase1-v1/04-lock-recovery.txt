@@ -1,0 +1,17 @@
+== dead-holder lock recovery (lock file naming a dead PID) ==
+lock holder pid=2890107 (dead)
+$ fm-memory.sh remember "after dead-holder lock"
+recorded memory m-1790374348-2890109-2489
+rc=0
+== live-holder lock is respected ==
+lock holder pid=2890242 (alive)
+$ fm-memory.sh remember "should be refused"
+fm-memory: the memory store is busy or unavailable
+
+real	0m5.116s
+user	0m0.072s
+sys	0m0.150s
+rc=1
+$ fm-memory.sh check (while busy)
+memory reminders: store busy or unavailable
+rc=0

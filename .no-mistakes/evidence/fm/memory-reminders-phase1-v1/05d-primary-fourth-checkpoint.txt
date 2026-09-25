@@ -1,0 +1,23 @@
+❯ You are firstmate for this lab home. Acknowledge/handle that rearm-resurface wake exactly as AGENTS.md prescribes (minimal steps, no crew spawning), then run the 120-second watch checkpoint again
+  and tell me exactly what it printed.
+  Ran 2 shell commands
+● The notification means monitoring had been down and pending work needs to be shown again. Per AGENTS.md, handling it starts with draining the durable wake queue.
+  Ran 1 shell command
+● The only queued item is the "Call the repair shop" reminder. I'm surfacing it to you here and leaving the reminder itself open. Now running the acknowledgement:
+  Ran 2 shell commands
+● Captain, the watch checkpoint printed exactly this:
+  check: /tmp/fm-lab.HZVgde/state/memory-reminders.check.sh: memory reminder due: m-1790374323-2884885-30752 check the oven
+  So your "check the oven" reminder has now come through.
+  What I did to handle the earlier notification, following AGENTS.md:
+  - Drained the queue. It held one item: the overdue "Call the repair shop" reminder (m-1790373683-2714390-27075). That reminder had been stuck unacknowledged in the queue, so every later run printed
+    "rearm-resurface" instead of passing new reminders through.
+  - Acknowledged it with the command the drain printed (--ack-through 1 --recovery-generation 2904366.1790374387.cGBjgx). That printed nothing, which is its normal result.
+  - Left both reminders open. I didn't mark either one done, since that's your call.
+  The oven reminder is now a new queued item. The next time this home handles a notification, it will need the same drain and acknowledge steps. Otherwise later runs will likely print
+  "rearm-resurface" again.
+✻ Sautéed for 23s · done 4:13 PM
+                                                                                                                                                                ✔ Update installed · Restart to update
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Handle that oven wake the same way, then run the checkpoint again
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

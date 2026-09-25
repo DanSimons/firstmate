@@ -1,0 +1,50 @@
+++ M=bin/fm-memory.sh
+++ echo '$ fm-memory.sh remember "The storage-unit code is in the paper folder"'
+$ fm-memory.sh remember "The storage-unit code is in the paper folder"
+++ bin/fm-memory.sh remember 'The storage-unit code is in the paper folder'
+recorded memory m-1790373683-2714371-13660
+++ echo rc=0
+rc=0
+++ echo '$ fm-memory.sh remind --in 3s "Call the repair shop"'
+$ fm-memory.sh remind --in 3s "Call the repair shop"
+++ bin/fm-memory.sh remind --in 3s 'Call the repair shop'
+recorded reminder m-1790373683-2714390-27075 due 2026-09-25T22:01:26Z
+++ echo rc=0
+rc=0
+++ echo '$ fm-memory.sh remind --at 2030-10-05T16:30:00Z "Send the renewal note"'
+$ fm-memory.sh remind --at 2030-10-05T16:30:00Z "Send the renewal note"
+++ bin/fm-memory.sh remind --at 2030-10-05T16:30:00Z 'Send the renewal note'
+recorded reminder m-1790373683-2714480-343 due 2030-10-05T16:30:00Z
+++ echo rc=0
+rc=0
+++ echo '$ ls state/'
+$ ls state/
+++ ls /tmp/fm-lab.HZVgde/state
+memory-reminders.check.sh
+memory-reminders.check-trust
+++ echo '$ fm-memory.sh list'
+$ fm-memory.sh list
+++ bin/fm-memory.sh list
+m-1790373683-2714371-13660	memory	open	-	The storage-unit code is in the paper folder
+m-1790373683-2714390-27075	reminder	open	2026-09-25T22:01:26Z	Call the repair shop
+m-1790373683-2714480-343	reminder	open	2030-10-05T16:30:00Z	Send the renewal note
+++ echo '$ fm-memory.sh list --kind memory'
+$ fm-memory.sh list --kind memory
+++ bin/fm-memory.sh list --kind memory
+m-1790373683-2714371-13660	memory	open	-	The storage-unit code is in the paper folder
+++ echo '$ fm-memory.sh search "REPAIR shop"'
+$ fm-memory.sh search "REPAIR shop"
+++ bin/fm-memory.sh search 'REPAIR shop'
+m-1790373683-2714390-27075	reminder	open	2026-09-25T22:01:26Z	Call the repair shop
+++ echo rc=0
+rc=0
+++ echo '$ fm-memory.sh search "nonexistent"'
+$ fm-memory.sh search "nonexistent"
+++ bin/fm-memory.sh search nonexistent
+++ echo rc=0
+rc=0
+++ echo '$ fm-memory.sh check   (before due)'
+$ fm-memory.sh check   (before due)
+++ bin/fm-memory.sh check
+++ echo 'rc=0 (expect no output)'
+rc=0 (expect no output)

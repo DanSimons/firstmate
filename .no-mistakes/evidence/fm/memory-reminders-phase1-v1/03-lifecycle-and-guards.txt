@@ -1,0 +1,161 @@
+== due delivery via the registered, authenticated check shim ==
+$ state/memory-reminders.check.sh   (after due)
+memory reminder due: m-1790374333-2886575-25826 Call the repair shop; m-1790374333-2886667-11505 Renew parking permit
+rc=0
+$ state/memory-reminders.check.sh   (repeat)
+rc=0 (expect silent)
+$ fm-memory.sh list
+m-1790374333-2886555-30985	memory	open	-	Pick up dry cleaning Friday
+m-1790374333-2886575-25826	reminder	open	2026-09-25T22:12:14Z	Call the repair shop
+m-1790374333-2886667-11505	reminder	open	2026-09-25T22:12:14Z	Renew parking permit
+m-1790374333-2886742-31408	reminder	open	2026-09-25T23:12:13Z	Future thing
+$ fm-memory.sh done m-1790374333-2886575-25826
+done: m-1790374333-2886575-25826 at 1790374336
+rc=0
+$ fm-memory.sh done m-1790374333-2886575-25826  (again)
+already done: m-1790374333-2886575-25826
+rc=0
+$ fm-memory.sh done m-1790374333-2886667-11505
+done: m-1790374333-2886667-11505 at 1790374336
+rc=0
+$ ls state (check still armed, 1 reminder open)
+memory-reminders.check.sh
+memory-reminders.check-trust
+$ fm-memory.sh done m-1790374333-2886742-31408  (last open reminder)
+done: m-1790374333-2886742-31408 at 1790374336
+rc=0
+$ ls state (check retired; memory remains)
+$ fm-memory.sh list
+m-1790374333-2886555-30985	memory	open	-	Pick up dry cleaning Friday
+$ fm-memory.sh list --all
+m-1790374333-2886555-30985	memory	open	-	Pick up dry cleaning Friday
+m-1790374333-2886575-25826	reminder	done	2026-09-25T22:12:14Z	Call the repair shop
+m-1790374333-2886667-11505	reminder	done	2026-09-25T22:12:14Z	Renew parking permit
+m-1790374333-2886742-31408	reminder	done	2026-09-25T23:12:13Z	Future thing
+$ fm-memory.sh search --all repair
+m-1790374333-2886575-25826	reminder	done	2026-09-25T22:12:14Z	Call the repair shop
+== adversarial input ==
+$ fm-memory.sh remember ""
+fm-memory: text must be one printable line of at most 500 bytes
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh remember <501 bytes>
+fm-memory: text must be one printable line of at most 500 bytes
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh remember $'a\nb'
+fm-memory: text must be one printable line of at most 500 bytes
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh remind --in -5m x
+fm-memory: invalid reminder time
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh remind --at 2026-13-99 x
+fm-memory: invalid reminder time
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh done ../../etc/passwd
+fm-memory: invalid reminder id
+Usage:
+  fm-memory.sh remember <text>
+  fm-memory.sh remind --at <epoch|YYYY-MM-DDTHH:MM:SSZ> <text>
+  fm-memory.sh remind --in <N{s|m|h|d|w}> <text>
+  fm-memory.sh list [--all] [--kind memory|reminder]
+  fm-memory.sh search [--all] <query>
+  fm-memory.sh done <reminder-id>
+  fm-memory.sh check
+
+`list` shows memories and open reminders by default. `--all` also shows completed
+reminders. `search` is a case-insensitive literal search over the same records.
+Reminder creation arms an authenticated watcher check automatically, and
+completing the last open reminder retires it. `check` is for the watcher: it
+prints one line when a reminder is due or a stored record is malformed, and
+nothing otherwise.
+rc=2
+$ fm-memory.sh jira
+fm-memory: unknown command: jira
+Usage:
+== malformed record does not suppress due reminders ==
+$ state/memory-reminders.check.sh
+memory reminder due: m-1790374336-2887444-27853 Due despite corruption; malformed record m-1-1-1
+rc=0
+== dead-holder lock recovery ==
+total 12
+drwxrwxr-x 2 pai pai 4096 Sep 25 16:12 .
+drwx------ 4 pai pai 4096 Sep 25 16:12 ..
+-rw-rw-r-- 1 pai pai    8 Sep 25 16:12 pid
+$ fm-memory.sh remember "after stale lock"
+rm: cannot remove '/tmp/fm-lab.ZDGYBZ/data/memory/.lock': Is a directory
+recorded memory m-1790374338-2887562-22918
+rc=0
