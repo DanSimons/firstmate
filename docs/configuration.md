@@ -1806,7 +1806,7 @@ A long-polling external process is registered as a *source* through its adapter,
 
 **Open the Lavish artifact first**
 
-Before arming any Lavish source, open its artifact with `lavish-axi` so the saved session identifies the board's server; each poll attempt derives its host and port from that session and refuses missing or invalid session evidence before consuming a staged worker reply.
+Before arming any Lavish source, load [`lavish-document`](../.agents/skills/lavish-document/SKILL.md) and open its artifact with `lavish-axi` so the saved session identifies the board's server; each poll attempt derives its host and port from that session and refuses missing or invalid session evidence before consuming a staged worker reply.
 
 **Retry interrupted Lavish polls**
 
