@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bin/fm-lavish-view.sh forwards Lavish port 4387 and opens the forwarded
-# URL when a local opener exists. Inside an SSH session it prints the
-# command instead of connecting.
+# URL when a local opener exists. A later view replaces an earlier forward,
+# and an SSH session does not stop the forward.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -12,13 +12,27 @@ VIEW="$ROOT/bin/fm-lavish-view.sh"
 FAKEBIN=$(fm_fakebin "$TMP_ROOT")
 SSH_LOG="$TMP_ROOT/ssh.log"
 OPEN_LOG="$TMP_ROOT/open.log"
-export SSH_LOG OPEN_LOG
+SSH_HOLD="$TMP_ROOT/port-4387-held"
+export SSH_LOG OPEN_LOG SSH_HOLD
 export SSH_RC=0
 
 cat > "$FAKEBIN/ssh" <<'SH'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >> "${SSH_LOG:?}"
-exit "${SSH_RC:-0}"
+case " $* " in
+  *" -O exit "*)
+    [ -s "${SSH_HOLD:?}" ] || exit 255
+    : > "$SSH_HOLD"
+    exit 0
+    ;;
+esac
+[ "${SSH_RC:-0}" -eq 0 ] || exit "$SSH_RC"
+if [ -s "${SSH_HOLD:?}" ]; then
+  echo 'bind [127.0.0.1]:4387: Address already in use' >&2
+  exit 255
+fi
+printf 'held\n' > "$SSH_HOLD"
+exit 0
 SH
 cat > "$FAKEBIN/xdg-open" <<'SH'
 #!/usr/bin/env bash
@@ -36,12 +50,13 @@ ln -s "$(command -v bash)" "$FAKEBIN/bash"
 reset_logs() {
   : > "$SSH_LOG"
   : > "$OPEN_LOG"
+  rm -f "$SSH_HOLD"
   SSH_RC=0
 }
 
 run_view() {
   env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_RC="$SSH_RC" \
+    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC="$SSH_RC" \
     "$VIEW" "$@"
 }
 
@@ -51,7 +66,7 @@ run_view_in_ssh() {
   # shellcheck disable=SC2086
   env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
     $marker \
-    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_RC="$SSH_RC" \
+    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC="$SSH_RC" \
     "$VIEW" "$@"
 }
 
@@ -124,7 +139,7 @@ test_local_run_uses_open_when_xdg_open_is_absent() {
   cp "$FAKEBIN/ssh" "$FAKEBIN/open" "$restricted/"
   ln -s "$(command -v bash)" "$restricted/bash"
   out=$(env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_RC=0 \
+    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC=0 \
     "$VIEW" 'user@host' 'http://127.0.0.1:4387/session/abc') || fail "open-only view failed"
   assert_equals 'http://127.0.0.1:4387/session/abc' "$out" "the forwarded URL changed"
   assert_grep 'open http://127.0.0.1:4387/session/abc' "$OPEN_LOG" "open was not invoked"
@@ -139,7 +154,7 @@ test_local_run_without_an_opener_still_prints_the_url() {
   cp "$FAKEBIN/ssh" "$restricted/"
   ln -s "$(command -v bash)" "$restricted/bash"
   out=$(env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_RC=0 \
+    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC=0 \
     "$VIEW" 'user@host' 'http://[::1]:4387/session/abc') || fail "ssh-only view failed"
   assert_equals 'http://127.0.0.1:4387/session/abc' "$out" \
     "an IPv6 session URL was not rewritten onto the forward"
@@ -159,31 +174,34 @@ test_ssh_failure_does_not_open_a_browser() {
   pass "a failed forward does not open a browser"
 }
 
-test_ssh_session_prints_the_command_and_does_not_connect() {
+test_second_view_replaces_the_earlier_forward() {
+  local out
+  reset_logs
+  run_view 'user@host' 'http://box.example:4387/session/one' >/dev/null || \
+    fail "first view failed"
+  out=$(run_view 'user@host' 'http://box.example:4387/session/two' 2>&1) || \
+    fail "second view failed while the first forward held 4387: $out"
+  assert_equals 'http://127.0.0.1:4387/session/two' "$out" \
+    "the second view did not print its forwarded URL"
+  assert_grep 'xdg-open http://127.0.0.1:4387/session/two' "$OPEN_LOG" \
+    "the second view did not open its forwarded URL"
+  [ -s "$SSH_HOLD" ] || fail "no forward held 4387 after the second view"
+  pass "a second view replaces the earlier forward on 4387"
+}
+
+test_ssh_session_still_forwards_and_opens() {
   local marker out
   for marker in 'SSH_CONNECTION=1' 'SSH_CLIENT=1' 'SSH_TTY=/dev/pts/1'; do
     reset_logs
     out=$(run_view_in_ssh "$marker" 'user@host' 'http://box.example:4387/session/abc') || \
       fail "in-session view failed for $marker"
-    assert_contains "$out" 'ssh -o ExitOnForwardFailure=yes -f -N -L 4387:127.0.0.1:4387 -- user@host' \
-      "the printed command was not the local forward for $marker"
-    assert_contains "$out" 'http://127.0.0.1:4387/session/abc' \
+    assert_equals 'http://127.0.0.1:4387/session/abc' "$out" \
       "the printed URL was not the forwarded path for $marker"
-    [ ! -s "$SSH_LOG" ] || fail "an SSH session invoked ssh for $marker"
-    [ ! -s "$OPEN_LOG" ] || fail "an SSH session opened a browser for $marker"
+    assert_grep '4387:127.0.0.1:4387' "$SSH_LOG" "an SSH session skipped the forward for $marker"
+    assert_grep 'xdg-open http://127.0.0.1:4387/session/abc' "$OPEN_LOG" \
+      "an SSH session did not open the browser for $marker"
   done
-  pass "an SSH session prints the exact command and does not connect"
-}
-
-test_ssh_session_quotes_a_remote_target_with_spaces() {
-  local out
-  reset_logs
-  out=$(run_view_in_ssh 'SSH_CONNECTION=1' 'user@host name' 'http://127.0.0.1:4387/session/abc') || \
-    fail "in-session view failed for a spaced target"
-  assert_contains "$out" 'ssh -o ExitOnForwardFailure=yes -f -N -L 4387:127.0.0.1:4387 -- user@host\ name' \
-    "a spaced remote target was not shell-quoted in the printed command"
-  [ ! -s "$SSH_LOG" ] || fail "a spaced target inside SSH still invoked ssh"
-  pass "an SSH session quotes the remote target in the printed command"
+  pass "an SSH session still forwards and opens the browser"
 }
 
 test_help_documents_default_port_and_does_not_connect
@@ -193,6 +211,6 @@ test_local_run_prefers_xdg_open_and_keeps_a_path_at_sign
 test_local_run_uses_open_when_xdg_open_is_absent
 test_local_run_without_an_opener_still_prints_the_url
 test_ssh_failure_does_not_open_a_browser
-test_ssh_session_prints_the_command_and_does_not_connect
-test_ssh_session_quotes_a_remote_target_with_spaces
+test_second_view_replaces_the_earlier_forward
+test_ssh_session_still_forwards_and_opens
 echo "# all fm-lavish-view tests passed"

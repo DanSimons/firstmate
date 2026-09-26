@@ -13,12 +13,10 @@
 # Lavish. <session-url> is that machine's Lavish session URL. The browser
 # opens the same path on http://127.0.0.1:4387, which is the forwarded end.
 #
-# When SSH_CONNECTION, SSH_CLIENT, or SSH_TTY is set, this script is already
-# inside an SSH session. It does not SSH back to this machine. It prints the
-# exact command to run on the device you are sitting at, then the forwarded
-# URL, and exits 0.
-#
-# A local run uses ssh -f -N and ExitOnForwardFailure so the browser opens
+# The forward runs as a backgrounded ssh control master on a fixed per-user
+# control socket. Each run first asks that master to exit, so a forward left
+# by an earlier view is replaced rather than failing with the port in use.
+# The run then uses ssh -f -N and ExitOnForwardFailure so the browser opens
 # only after the forward is up. The -L specification stays
 # 4387:127.0.0.1:4387. The remote target is passed after -- so it cannot be
 # read as an ssh option.
@@ -38,13 +36,8 @@ usage() {
     '<remote-target> is the ssh destination, such as user@host.' \
     '<session-url> is the Lavish session URL on that machine.' \
     '' \
-    'When this script is already running inside an SSH session, it does not SSH' \
-    'back to this machine. It prints the exact command to run on the device you' \
-    'are sitting at.'
-}
-
-fm_in_ssh_session() {
-  [ -n "${SSH_CONNECTION:-}" ] || [ -n "${SSH_CLIENT:-}" ] || [ -n "${SSH_TTY:-}" ]
+    'A forward left by an earlier run is replaced, so viewing the next document' \
+    'reuses port 4387.'
 }
 
 # Rewrite a session URL onto the forwarded loopback port, keeping path,
@@ -91,16 +84,11 @@ fm_local_opener() {
   return 1
 }
 
-fm_print_local_command() {
-  local remote=$1 quoted
-  quoted=$(printf '%q' "$remote")
-  printf 'Run this on the device you are sitting at:\n'
-  printf 'ssh -o ExitOnForwardFailure=yes -f -N -L 4387:127.0.0.1:4387 -- %s\n' "$quoted"
-}
-
 fm_ssh_forward() {
-  local remote=$1
-  ssh -o ExitOnForwardFailure=yes -f -N -L 4387:127.0.0.1:4387 -- "$remote"
+  local remote=$1 control
+  control="${TMPDIR:-/tmp}/fm-lavish-view-4387-${UID}.sock"
+  ssh -S "$control" -O exit -- "$remote" >/dev/null 2>&1 || true
+  ssh -o ExitOnForwardFailure=yes -M -S "$control" -f -N -L 4387:127.0.0.1:4387 -- "$remote"
 }
 
 if [ "$#" -eq 1 ] && { [ "$1" = "--help" ] || [ "$1" = "-h" ]; }; then
@@ -130,12 +118,6 @@ case "$session_url" in
 esac
 
 forwarded=$(fm_forwarded_url "$session_url")
-
-if fm_in_ssh_session; then
-  fm_print_local_command "$remote"
-  printf '%s\n' "$forwarded"
-  exit 0
-fi
 
 fm_ssh_forward "$remote"
 printf '%s\n' "$forwarded"

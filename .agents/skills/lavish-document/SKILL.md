@@ -13,7 +13,7 @@ metadata:
 
 Load this before creating or opening a Lavish document, including a visual decision or report.
 It owns the fixed port and the remote handoff.
-[`bin/fm-lavish-view.sh`](../../../bin/fm-lavish-view.sh) owns the ssh forward, the in-session refusal, and the local browser open.
+[`bin/fm-lavish-view.sh`](../../../bin/fm-lavish-view.sh) owns the ssh forward, replacing an earlier forward on 4387, and the local browser open.
 Read its header and `--help` before running it.
 
 ## Port
@@ -40,5 +40,4 @@ If that destination is not already known, ask for it rather than guessing or ope
 Pass the session URL as lavish-axi printed it.
 The viewer script rewrites it onto the forwarded port.
 Do not run the viewer on this machine to open a browser.
-If it is already inside an SSH session, the script prints the command for the captain's device and does not SSH back.
 Do not pass `--reopen` unless the captain asked to reopen a session they ended.
