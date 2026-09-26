@@ -1,0 +1,86 @@
+
+===== PRE: local netns port 4387 before any view (expect nothing listening / connection refused) =====
+http_code=000
+curl rc=7 (nothing on local 4387)
+
+===== S1: fm-lavish-view.sh lavish-remote <doc1 session url> =====
+http://127.0.0.1:4387/session/1718a89ae8cdfe92
+exit=0
+masters=1
+Master running (pid=1179396)
+GET forwarded doc1 session: 200 <title>Lavish live check doc 1 · Lavish</title>
+
+===== S2: second document on the same remote while the first forward is still up =====
+http://127.0.0.1:4387/session/ddef8c6a675ae403
+exit=0
+masters=1
+Master running (pid=1179720)
+GET forwarded doc2 session: 200 <title>Lavish live check doc 2 · Lavish</title>
+
+===== S3: SIGKILL the forward master, leaving a stale control socket =====
+killing master pid=1179720 with SIGKILL
+srw------- 1 root root 0 Sep 26 12:31 /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock
+Control socket connect(/tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock): Connection refused
+masters=0
+http://127.0.0.1:4387/session/1718a89ae8cdfe92
+exit=0
+masters=1
+Master running (pid=1181014)
+
+===== S3b: next view after recovery still replaces via the control master (no 'Address already in use') =====
+http://127.0.0.1:4387/session/ddef8c6a675ae403
+exit=0
+masters=1
+
+===== S4: with SSH_CONNECTION/SSH_CLIENT/SSH_TTY set the script still forwards and opens =====
+http://127.0.0.1:4387/session/1718a89ae8cdfe92
+exit=0
+masters=1
+GET: 200
+
+===== S5: adversarial arguments =====
+error: remote target must not start with '-'
+exit=2
+error: session URL must not start with '-'
+exit=2
+Usage: fm-lavish-view.sh <remote-target> <session-url>
+       fm-lavish-view.sh --help
+
+Forward Lavish from <remote-target> to local port 4387 and open the session
+in a local browser when an opener exists.
+
+The default port is 4387. The forward is always ssh -L 4387:127.0.0.1:4387.
+There is no second port.
+
+<remote-target> is the ssh destination, such as user@host.
+<session-url> is the Lavish session URL on that machine.
+
+A forward left by an earlier run is replaced, so viewing the next document
+reuses port 4387.
+exit=2
+no injected ssh option executed
+
+===== S6: ssh command lines the script ran =====
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O exit -- lavish-remote
+ssh -o ExitOnForwardFailure=yes -M -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -f -N -L 4387:127.0.0.1:4387 -- lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O check lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O exit -- lavish-remote
+ssh -o ExitOnForwardFailure=yes -M -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -f -N -L 4387:127.0.0.1:4387 -- lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O check lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O check lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O check lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O exit -- lavish-remote
+ssh -o ExitOnForwardFailure=yes -M -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -f -N -L 4387:127.0.0.1:4387 -- lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O check lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O exit -- lavish-remote
+ssh -o ExitOnForwardFailure=yes -M -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -f -N -L 4387:127.0.0.1:4387 -- lavish-remote
+ssh -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -O exit -- lavish-remote
+ssh -o ExitOnForwardFailure=yes -M -S /tmp/fm-lavish-lab.VmVDao/tmp/fm-lavish-view-4387-0.sock -f -N -L 4387:127.0.0.1:4387 -- lavish-remote
+
+===== opener log =====
+xdg-open http://127.0.0.1:4387/session/1718a89ae8cdfe92
+xdg-open http://127.0.0.1:4387/session/ddef8c6a675ae403
+xdg-open http://127.0.0.1:4387/session/1718a89ae8cdfe92
+xdg-open http://127.0.0.1:4387/session/ddef8c6a675ae403
+xdg-open http://127.0.0.1:4387/session/1718a89ae8cdfe92
+Exit request sent.

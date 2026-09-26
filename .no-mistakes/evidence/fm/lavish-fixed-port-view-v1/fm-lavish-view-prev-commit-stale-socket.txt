@@ -1,0 +1,8 @@
+first view exit=0
+ControlSocket /tmp/fm-lavish-lab.VmVDao/tmp2/fm-lavish-view-4387-0.sock already exists, disabling multiplexing
+http://127.0.0.1:4387/session/1718a89ae8cdfe92
+after-SIGKILL view exit=0
+bind [127.0.0.1]:4387: Address already in use
+channel_setup_fwd_listener_tcpip: cannot listen to port: 4387
+Could not request local forwarding.
+next view exit=255
