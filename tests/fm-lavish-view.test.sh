@@ -19,11 +19,20 @@ export SSH_RC=0
 cat > "$FAKEBIN/ssh" <<'SH'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >> "${SSH_LOG:?}"
+control=
+prev=
+for arg in "$@"; do
+  [ "$prev" = "-S" ] && control=$arg
+  prev=$arg
+done
 case " $* " in
   *" -O exit "*)
-    [ -s "${SSH_HOLD:?}" ] || exit 255
-    : > "$SSH_HOLD"
-    exit 0
+    if [ -n "$control" ] && [ -e "$control" ] && [ "$(cat "${SSH_HOLD:?}" 2>/dev/null)" = managed ]; then
+      : > "$SSH_HOLD"
+      rm -f "$control"
+      exit 0
+    fi
+    exit 255
     ;;
 esac
 [ "${SSH_RC:-0}" -eq 0 ] || exit "$SSH_RC"
@@ -31,7 +40,13 @@ if [ -s "${SSH_HOLD:?}" ]; then
   echo 'bind [127.0.0.1]:4387: Address already in use' >&2
   exit 255
 fi
-printf 'held\n' > "$SSH_HOLD"
+if [ -n "$control" ] && [ -e "$control" ]; then
+  echo "ControlSocket $control already exists, disabling multiplexing" >&2
+  printf 'unmanaged\n' > "$SSH_HOLD"
+  exit 0
+fi
+printf 'managed\n' > "$SSH_HOLD"
+[ -z "$control" ] || : > "$control"
 exit 0
 SH
 cat > "$FAKEBIN/xdg-open" <<'SH'
@@ -46,17 +61,20 @@ exit 0
 SH
 chmod +x "$FAKEBIN/ssh" "$FAKEBIN/xdg-open" "$FAKEBIN/open"
 ln -s "$(command -v bash)" "$FAKEBIN/bash"
+ln -s "$(command -v rm)" "$FAKEBIN/rm"
+ln -s "$(command -v cat)" "$FAKEBIN/cat"
+CONTROL="$TMP_ROOT/fm-lavish-view-4387-${UID}.sock"
 
 reset_logs() {
   : > "$SSH_LOG"
   : > "$OPEN_LOG"
-  rm -f "$SSH_HOLD"
+  rm -f "$SSH_HOLD" "$CONTROL"
   SSH_RC=0
 }
 
 run_view() {
   env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC="$SSH_RC" \
+    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" TMPDIR="$TMP_ROOT" SSH_RC="$SSH_RC" \
     "$VIEW" "$@"
 }
 
@@ -66,7 +84,7 @@ run_view_in_ssh() {
   # shellcheck disable=SC2086
   env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
     $marker \
-    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC="$SSH_RC" \
+    PATH="$FAKEBIN" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" TMPDIR="$TMP_ROOT" SSH_RC="$SSH_RC" \
     "$VIEW" "$@"
 }
 
@@ -138,8 +156,10 @@ test_local_run_uses_open_when_xdg_open_is_absent() {
   mkdir -p "$restricted"
   cp "$FAKEBIN/ssh" "$FAKEBIN/open" "$restricted/"
   ln -s "$(command -v bash)" "$restricted/bash"
+  ln -s "$(command -v rm)" "$restricted/rm"
+  ln -s "$(command -v cat)" "$restricted/cat"
   out=$(env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC=0 \
+    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" TMPDIR="$TMP_ROOT" SSH_RC=0 \
     "$VIEW" 'user@host' 'http://127.0.0.1:4387/session/abc') || fail "open-only view failed"
   assert_equals 'http://127.0.0.1:4387/session/abc' "$out" "the forwarded URL changed"
   assert_grep 'open http://127.0.0.1:4387/session/abc' "$OPEN_LOG" "open was not invoked"
@@ -153,8 +173,10 @@ test_local_run_without_an_opener_still_prints_the_url() {
   mkdir -p "$restricted"
   cp "$FAKEBIN/ssh" "$restricted/"
   ln -s "$(command -v bash)" "$restricted/bash"
+  ln -s "$(command -v rm)" "$restricted/rm"
+  ln -s "$(command -v cat)" "$restricted/cat"
   out=$(env -u SSH_CONNECTION -u SSH_CLIENT -u SSH_TTY \
-    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" SSH_RC=0 \
+    PATH="$restricted" SSH_LOG="$SSH_LOG" OPEN_LOG="$OPEN_LOG" SSH_HOLD="$SSH_HOLD" TMPDIR="$TMP_ROOT" SSH_RC=0 \
     "$VIEW" 'user@host' 'http://[::1]:4387/session/abc') || fail "ssh-only view failed"
   assert_equals 'http://127.0.0.1:4387/session/abc' "$out" \
     "an IPv6 session URL was not rewritten onto the forward"
@@ -189,6 +211,19 @@ test_second_view_replaces_the_earlier_forward() {
   pass "a second view replaces the earlier forward on 4387"
 }
 
+test_stale_control_socket_does_not_block_the_next_view() {
+  local out
+  reset_logs
+  : > "$CONTROL"
+  run_view 'user@host' 'http://box.example:4387/session/one' >/dev/null 2>&1 || \
+    fail "a view with a stale control socket failed"
+  out=$(run_view 'user@host' 'http://box.example:4387/session/two' 2>&1) || \
+    fail "a stale control socket left 4387 unreplaceable: $out"
+  assert_equals 'http://127.0.0.1:4387/session/two' "$out" \
+    "the view after a stale control socket did not print its forwarded URL"
+  pass "a stale control socket does not block the next view"
+}
+
 test_ssh_session_still_forwards_and_opens() {
   local marker out
   for marker in 'SSH_CONNECTION=1' 'SSH_CLIENT=1' 'SSH_TTY=/dev/pts/1'; do
@@ -212,5 +247,6 @@ test_local_run_uses_open_when_xdg_open_is_absent
 test_local_run_without_an_opener_still_prints_the_url
 test_ssh_failure_does_not_open_a_browser
 test_second_view_replaces_the_earlier_forward
+test_stale_control_socket_does_not_block_the_next_view
 test_ssh_session_still_forwards_and_opens
 echo "# all fm-lavish-view tests passed"

@@ -16,6 +16,7 @@
 # The forward runs as a backgrounded ssh control master on a fixed per-user
 # control socket. Each run first asks that master to exit, so a forward left
 # by an earlier view is replaced rather than failing with the port in use.
+# When no live master answers, a stale socket file is removed first.
 # The run then uses ssh -f -N and ExitOnForwardFailure so the browser opens
 # only after the forward is up. The -L specification stays
 # 4387:127.0.0.1:4387. The remote target is passed after -- so it cannot be
@@ -87,7 +88,7 @@ fm_local_opener() {
 fm_ssh_forward() {
   local remote=$1 control
   control="${TMPDIR:-/tmp}/fm-lavish-view-4387-${UID}.sock"
-  ssh -S "$control" -O exit -- "$remote" >/dev/null 2>&1 || true
+  ssh -S "$control" -O exit -- "$remote" >/dev/null 2>&1 || rm -f "$control"
   ssh -o ExitOnForwardFailure=yes -M -S "$control" -f -N -L 4387:127.0.0.1:4387 -- "$remote"
 }
 
